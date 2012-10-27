@@ -36,15 +36,19 @@ $metaboxes = array(
     	"created_at" => "created_at",
     	"updated_at" => "updated_at"
 
-    	);
+    );
 
+$xmlrpc_methods = array(
+        "update_event",
+        "delete_event"
+    ); 
 
 
 
 // Function to prepend every penguin with ze post_type_name
-function prepend($item) {
+function prepend($item, $delimiter="_") {
     global $post_type_name;
-    return $post_type_name . "_" . $item;
+    return $post_type_name . $delimiter . $item;
 }
 
 //  Prepends the metaboxes-ids with the post_type_name
@@ -60,9 +64,12 @@ $metaboxes = $tmp_metaboxes;
 // Enter id of post type
 
 $myFile = prepend("post_type.php");
+$myXmlrpcFile = prepend("xmlrpc.php");
+
 $fh = fopen($myFile, 'w') or die("can't open file");
-fwrite($fh, "<?php\n");
+fwrite($fh,"<?php\n");
 fwrite($fh, $plugin_description);
+fwrite($fh, sprintf("require_once(%s);", $myXmlrpcFile));
 
 fwrite($fh, "\$post_type_name = {$post_type_name};");
 
@@ -75,6 +82,7 @@ add_action('init', '%s');
 
 function %s() {
     global $post_type_name;
+
     register_post_type(
         $post_type_name,
          array(
@@ -96,6 +104,9 @@ function %s() {
             'register_meta_box_cb' => '%s'
         )
     );
+
+    // Adding xml-rpc methods
+    add_filter( 'xmlrpc_methods', %s);
 }
 
 
@@ -105,7 +116,8 @@ EOD;
 $add_action_method = sprintf($add_action_method, 
     prepend("create_post_type"), 
     prepend("create_post_type"),
-    prepend("add_metaboxes")
+    prepend("add_metaboxes"),
+    prepend("add_xmlrpc_methods")
 );
 
 fwrite($fh, $add_action_method);
@@ -156,11 +168,124 @@ $dak_write_metaboxes_method .= "function {$metabox_id}() {
 
 fwrite($fh, $dak_write_metaboxes_method);
 
-fwrite($fh, "?>");
 
+fwrite($fh, "?>");
 fclose($fh);
 
 
+/****************************************************************************** 
+ *
+ *      XML-RPC methods generator
+ */
+echo    "Generating XML-RPC methods";
+
+$xmlrpcfh = fopen($myXmlrpcFile, 'w') or die ('Cannot open file');
+fwrite($xmlrpcfh,"<?php\n");
+fwrite($xmlrpcfh, $plugin_description);
+
+
+//  Prepends the method names with the post_type_name
+$tmp_xmlrpc_methods = array();
+foreach ($xmlrpc_methods as $key => $value) {
+    $tmp_xmlrpc_methods[prepend($key)] = $value;
+}
+$xmlrpc_methods = $tmp_xmlrpc_methods;
+
+
+
+
+
+
+$xmlrpc_array = <<< 'EOD'
+    // Add method names here
+    $%s = array( 
+EOD;
+
+foreach ($xmlrpc_methods as $methodname) {
+    $xmlrpc_array .= sprintf('"\n%s" => "%s",\n', prepend($methodname, '.'), prepend($methodname));
+}
+
+$xmlrpc_array .= <<< 'EOD'
+    );
+
+
+EOD;
+
+$xmlrpc_array = sprintf($xmlrpc_array, 
+    prepend('xmlrpc_methods')
+);
+
+fwrite($xmlrpcfh, $xmlrpc_array);
+
+
+
+$add_xmlrpc_methods = <<< 'EOD'
+/*
+ *  Adding xml-rpc methods
+ */     
+
+function %s($methods) {
+    global $%s;
+
+    foreach ($%s as $xmlrpc_method => $php_method) {
+        $methods[$xmlrpc_method] = $php_method;
+    }
+
+    return $methods;
+
+}
+
+
+EOD;
+
+
+// Dynamic function names
+$add_xmlrpc_methods = sprintf($add_xmlrpc_methods, 
+    prepend("add_xmlrpc_methods"), 
+    prepend('xmlrpc_methods'),
+    prepend('xmlrpc_methods')
+    
+);
+
+fwrite($xmlrpcfh, $add_xmlrpc_methods);
+
+
+$xmlrpc_method_declaration = <<< 'EOD'
+    
+    function %s($args) {
+        global $wp_xmlrpc_server;
+        $wp_xmlrpc_server->escape( $args );
+        # xmlrp
+        
+        $blog_id  = $args[0];
+        $username = $args[1];
+        $password = $args[2];
+
+        if ( ! $user = $wp_xmlrpc_server->login( $username, $password ) )
+            return $wp_xmlrpc_server->error;
+
+        /*
+         *  Functionality if authenticated and authorized:
+         */
+        
+        #Send me the Codez here
+
+    }
+
+
+EOD;
+
+$xmlrpc_method_declarations = ""; 
+foreach ($xmlrpc_methods as $method) {
+    $xmlrpc_method_declarations .= sprintf($xmlrpc_method_declaration, prepend($method));
+}
+
+fwrite($xmlrpcfh, $xmlrpc_method_declarations);
+
+fwrite($xmlrpcfh, "\n?>");
+
+
+fclose($xmlrpcfh);
 
 
 
