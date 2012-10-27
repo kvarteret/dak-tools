@@ -1,9 +1,9 @@
 <?php
 /*
-A php script to generate the  generate_dak_smugmug_album_post_type plugin.
+A php script to generate a custom_post_type plugin.
 Based on generate_dak_events_post_type by Snorre Davøen and Lisa Halvorsen.
 Author: Snorre Davøen, Lisa Halvorsen Robin G. Aaberg
-Version: 0.0002
+Version: 0.0003
 */
 
 
@@ -61,7 +61,7 @@ $metaboxes = $tmp_metaboxes;
 
 $myFile = prepend("post_type.php");
 $fh = fopen($myFile, 'w') or die("can't open file");
-fwrite($fh, "<?php");
+fwrite($fh, "<?php\n");
 fwrite($fh, $plugin_description);
 
 fwrite($fh, "\$post_type_name = {$post_type_name};");
@@ -74,6 +74,7 @@ add_action('init', '%s');
 //add_action('add_meta_boxes', 'dak_add_meta_boxes');
 
 function %s() {
+    global $post_type_name;
     register_post_type(
         $post_type_name,
          array(
@@ -96,6 +97,8 @@ function %s() {
         )
     );
 }
+
+
 EOD;
 
 // Dynamic function names
@@ -117,11 +120,12 @@ EOD;
 
 foreach ($metaboxes as $metabox_id => $metabox_title) {
     
-    $add_meta_box_function = "add_meta_box( 
-            \"{$metabox_id}\",
-            __(\"{$metabox_title}\"), \"{$metabox_id}\",
-            \$post_type_name
-        );\n";
+    $add_meta_box_function = "
+    add_meta_box( 
+        \"{$metabox_id}\",
+        __(\"{$metabox_title}\"), \"{$metabox_id}\",
+        \$post_type_name
+    );\n";
     $dak_add_metaboxes_method.=$add_meta_box_function;
 
 }
@@ -129,7 +133,7 @@ foreach ($metaboxes as $metabox_id => $metabox_title) {
 $dak_add_metaboxes_method.="}\n\n";
 
 // Dynamic function names
-$dak_add_metaboxes_method = sprintf($add_action_method, 
+$dak_add_metaboxes_method = sprintf($dak_add_metaboxes_method, 
     prepend("add_metaboxes")
 );
 
@@ -144,7 +148,7 @@ foreach ($metaboxes as $metabox_id => $metabox_title) {
 $dak_write_metaboxes_method .= "function {$metabox_id}() {
     global \$post;
     \$meta = get_post_meta(\$post->ID, {$metabox_id}, true);
-    echo '<input type=\"text\" name=\"{$metabox_id}\" value=\"\{\$meta}\" />';
+    echo '<input type=\"text\" name=\"{$metabox_id}\" value=\"'.\$meta.'\" />';
    
 }\n\n";     
 
