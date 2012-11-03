@@ -118,16 +118,16 @@ EOD;
 $add_action_method = sprintf($add_action_method, 
     prepend("create_post_type"),
     prepend("create_post_type"),
-    $post_type_name.s,     // name
+    $post_type_name."s",     // name
     $post_type_name,       // name_singular
     $post_type_name,       // add_new
     $post_type_name,       // add_new_item
     $post_type_name,       // edit_item
     $post_type_name,       // new_item
     $post_type_name,       // view_item
-    $post_type_name.s,     // search_items
-    $post_type_name.s,     // not_found
-    $post_type_name.s,     // not_found_in_trash
+    $post_type_name."s",     // search_items
+    $post_type_name."s",     // not_found
+    $post_type_name."s",     // not_found_in_trash
     prepend("add_metaboxes"),
     prepend("add_xmlrpc_methods")
 );
@@ -195,7 +195,15 @@ function %s($post_id, $post) {
         return $post->ID;
     // OK, we're authenticated: we need to find and save the data
     // We'll put it into an array to make it easier to loop though.
-    $%s['_location'] = $_POST['_location'];
+
+EOD;
+    foreach ($metaboxes as $metabox_id => $metabox_title) {
+        $add_metabox_to_array = "\$%s['{$metabox_id}'] = \$_POST['{$metabox_id}'];\n";
+        $add_metabox_to_array = sprintf($add_metabox_to_array, prepend("meta"));        
+        $dak_write_save_metaboxes_method .= $add_metabox_to_array;
+    }
+$dak_write_save_metaboxes_method .= <<< 'EOD'
+
     // Add values of $events_meta as custom fields
     foreach ($%s as $key => $value) { // Cycle through the $events_meta array!
         if( $post->post_type == 'revision' ) return; // Don't store custom data twice
