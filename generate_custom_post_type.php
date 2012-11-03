@@ -8,13 +8,15 @@ Version: 0.0003
 
 
 // Enter metadata id and title for metabox in array:
-$post_type_name = "dak_smugmug_album";
+$post_type_namespace = "dak_event";
+$post_type_name = "Event";
+
 
 $plugin_description = "/*
-Plugin Name: DAK Smugmug Album Post Type
+Plugin Name: Event Post Type
 Description: Add penguins to your smugmug album posts!
 Author: Snorre Davøen, Lisa Halvorsen, Robin Garen Aaberg.
-Version: 0.0002
+Version: 0.0003
 */\n\n";
 
 $metaboxes = array(
@@ -47,8 +49,8 @@ $xmlrpc_methods = array(
 
 // Function to prepend every penguin with ze post_type_name
 function prepend($item, $delimiter="_") {
-    global $post_type_name;
-    return $post_type_name . $delimiter . $item;
+    global $post_type_namespace;
+    return $post_type_namespace . $delimiter . $item;
 }
 
 //  Prepends the metaboxes-ids with the post_type_name
@@ -69,9 +71,9 @@ $myXmlrpcFile = prepend("xmlrpc.php");
 $fh = fopen($myFile, 'w') or die("can't open file");
 fwrite($fh,"<?php\n");
 fwrite($fh, $plugin_description);
-fwrite($fh, sprintf("require_once(%s);", $myXmlrpcFile));
+fwrite($fh, sprintf("require_once(\"%s\");\n\n", $myXmlrpcFile));
 
-fwrite($fh, "\$post_type_name = {$post_type_name};");
+fwrite($fh, "\$post_type_namespace = \"{$post_type_namespace}\";");
 
 
 
@@ -81,22 +83,22 @@ add_action('init', '%s');
 //add_action('add_meta_boxes', 'dak_add_meta_boxes');
 
 function %s() {
-    global $post_type_name;
+    global $post_type_namespace;
 
     register_post_type(
-        $post_type_name,
+        $post_type_namespace,
          array(
             'labels' => array(
-                'name' => __( 'Events' ),
-                'singular_name' => __( 'Event' ),
-                'add_new' => __( 'Add New Event' ),
-                'add_new_item' => __( 'Add New Event' ),
-                'edit_item' => __( 'Edit Event' ),
-                'new_item' => __( 'Add New Event' ),
-                'view_item' => __( 'View Event' ),
-                'search_items' => __( 'Search Event' ),
-                'not_found' => __( 'No events found' ),
-                'not_found_in_trash' => __( 'No events found in trash' )
+                'name' => __( '%s' ),
+                'singular_name' => __( '%s' ),
+                'add_new' => __( 'Add New %s' ),
+                'add_new_item' => __( 'Add New %s' ),
+                'edit_item' => __( 'Edit %s' ),
+                'new_item' => __( 'Add New %s' ),
+                'view_item' => __( 'View %s' ),
+                'search_items' => __( 'Search %s' ),
+                'not_found' => __( 'No %s found' ),
+                'not_found_in_trash' => __( 'No %s found in trash' )
             ),
             'public' => true,
             'supports' => array( 'title', "content", 'thumbnail' ),
@@ -114,8 +116,18 @@ EOD;
 
 // Dynamic function names
 $add_action_method = sprintf($add_action_method, 
-    prepend("create_post_type"), 
     prepend("create_post_type"),
+    prepend("create_post_type"),
+    $post_type_name.s,     // name
+    $post_type_name,       // name_singular
+    $post_type_name,       // add_new
+    $post_type_name,       // add_new_item
+    $post_type_name,       // edit_item
+    $post_type_name,       // new_item
+    $post_type_name,       // view_item
+    $post_type_name.s,     // search_items
+    $post_type_name.s,     // not_found
+    $post_type_name.s,     // not_found_in_trash
     prepend("add_metaboxes"),
     prepend("add_xmlrpc_methods")
 );
@@ -136,7 +148,7 @@ foreach ($metaboxes as $metabox_id => $metabox_title) {
     add_meta_box( 
         \"{$metabox_id}\",
         __(\"{$metabox_title}\"), \"{$metabox_id}\",
-        \$post_type_name
+        \$post_type_namespace
     );\n";
     $dak_add_metaboxes_method.=$add_meta_box_function;
 
@@ -159,7 +171,9 @@ foreach ($metaboxes as $metabox_id => $metabox_title) {
 
 $dak_write_metaboxes_method .= "function {$metabox_id}() {
     global \$post;
+    \$nonce = wp_create_nonce( plugin_basename(__FILE__) );
     \$meta = get_post_meta(\$post->ID, {$metabox_id}, true);
+    echo '<input type=\"hidden\" name=\"meta_noncename\" value=\"'.\$nonce.'\" />';
     echo '<input type=\"text\" name=\"{$metabox_id}\" value=\"'.\$meta.'\" />';
    
 }\n\n";     
@@ -168,6 +182,46 @@ $dak_write_metaboxes_method .= "function {$metabox_id}() {
 
 fwrite($fh, $dak_write_metaboxes_method);
 
+$dak_write_save_metaboxes_method = <<< 'EOD'
+// Method hijacked from Devin @ http://wptheming.com/2010/08/custom-metabox-for-post-type/ 
+function %s($post_id, $post) {
+    // verify this came from the our screen and with proper authorization,
+    // because save_post can be triggered at other times
+    if ( !wp_verify_nonce( $_POST['meta_noncename'], plugin_basename(__FILE__) )) {
+    return $post->ID;
+    }
+    // Is the user allowed to edit the post or page?
+    if ( !current_user_can( 'edit_post', $post->ID ))
+        return $post->ID;
+    // OK, we're authenticated: we need to find and save the data
+    // We'll put it into an array to make it easier to loop though.
+    $%s['_location'] = $_POST['_location'];
+    // Add values of $events_meta as custom fields
+    foreach ($%s as $key => $value) { // Cycle through the $events_meta array!
+        if( $post->post_type == 'revision' ) return; // Don't store custom data twice
+        $value = implode(',', (array)$value); // If $value is an array, make it a CSV (unlikely)
+        if(get_post_meta($post->ID, $key, FALSE)) { // If the custom field already has a value
+            update_post_meta($post->ID, $key, $value);
+        } else { // If the custom field doesn't have a value
+            add_post_meta($post->ID, $key, $value);
+        }
+        if(!$value) delete_post_meta($post->ID, $key); // Delete if blank
+    }
+}
+add_action('save_post', '%s', 1, 2); // save the custom fields
+
+
+EOD;
+
+// Dynamic function names
+$dak_write_save_metaboxes_method = sprintf($dak_write_save_metaboxes_method, 
+    prepend("save_post_meta"), 
+    prepend("meta"),
+    prepend("meta"),
+    prepend("save_post_meta")
+);
+
+fwrite($fh, $dak_write_save_metaboxes_method);
 
 fwrite($fh, "?>");
 fclose($fh);
@@ -179,9 +233,19 @@ fclose($fh);
  */
 echo    "Generating XML-RPC methods";
 
+$xmlrpc_description = <<< "EOD"
+/*
+ * xmlrpc methods to create custom post types remotely
+ *
+ * Author: Lisa Halvorsen, Snorre Davøen, Robin G. Aaberg
+ * Version: 0.0000003
+ */
+
+EOD;
+
 $xmlrpcfh = fopen($myXmlrpcFile, 'w') or die ('Cannot open file');
 fwrite($xmlrpcfh,"<?php\n");
-fwrite($xmlrpcfh, $plugin_description);
+fwrite($xmlrpcfh, $xmlrpc_description);
 
 
 //  Prepends the method names with the post_type_name
@@ -202,7 +266,7 @@ $xmlrpc_array = <<< 'EOD'
 EOD;
 
 foreach ($xmlrpc_methods as $methodname) {
-    $xmlrpc_array .= sprintf('"\n%s" => "%s",\n', prepend($methodname, '.'), prepend($methodname));
+    $xmlrpc_array .= sprintf("'%s' => '%s',\n", prepend($methodname, '.'), prepend($methodname));
 }
 
 $xmlrpc_array .= <<< 'EOD'
