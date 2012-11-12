@@ -203,7 +203,7 @@ function %s($post_id, $post) {
 
 EOD;
     foreach ($metaboxes as $metabox_id => $metabox_title) {
-        $add_metabox_to_array = "\$%s['{$metabox_id}'] = \$_POST['{$metabox_id}'];\n";
+        $add_metabox_to_array = "\t\$%s['{$metabox_id}'] = \$_POST['{$metabox_id}'];\n";
         $add_metabox_to_array = sprintf($add_metabox_to_array, prepend("meta"));        
         $dak_write_save_metaboxes_method .= $add_metabox_to_array;
     }
