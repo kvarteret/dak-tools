@@ -21,6 +21,8 @@ Version: 0.0003
 
 $metaboxes = array(
         "id" => "id",
+        "url" => "url",
+        "ical" => "ical",
     	"linkout" => "linkout",
     	"start_date" => "startDate",
     	"start_time" => "startTime",
@@ -29,6 +31,7 @@ $metaboxes = array(
     	"is_accepted" => "is_accepted",
     	"is_public" => "is_visible",
     	"custom_location" => "customLocation",
+        "common_location" => "commonLocation",
     	"location_id" => "location_id",
     	"arranger_id" => "arranger_id",
     	"festival_id" => "festival_id",
@@ -36,8 +39,10 @@ $metaboxes = array(
     	"covercharge" => "covercharge",
     	"age_limit" => "age_limit",
     	"created_at" => "created_at",
-    	"updated_at" => "updated_at"
-
+    	"updated_at" => "updated_at",
+        "arranger" => "arranger",
+        "categories" => "categories",
+        "festival" => "festival"
     );
 
 $xmlrpc_methods = array(
