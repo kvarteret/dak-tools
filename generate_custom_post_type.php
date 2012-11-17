@@ -228,8 +228,7 @@ EOD;
 
 // Dynamic function names
 $dak_write_save_metaboxes_method = sprintf($dak_write_save_metaboxes_method, 
-    prepend("save_post_meta"), 
-    prepend("meta"),
+    prepend("save_post_meta"),
     prepend("meta"),
     prepend("save_post_meta")
 );
