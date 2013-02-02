@@ -34,6 +34,9 @@ $metaboxes = array(
         "common_location" => "commonLocation",
     	"location_id" => "location_id",
     	"arranger_id" => "arranger_id",
+        "arranger_name" => "arranger_name",
+        "arranger_logo" => "arranger_logo",
+        "arranger_description" => "arranger_description",
     	"festival_id" => "festival_id",
     	"primary_picture" => "primaryPicture",
     	"covercharge" => "covercharge",
@@ -177,7 +180,7 @@ foreach ($metaboxes as $metabox_id => $metabox_title) {
 $dak_write_metaboxes_method .= "function {$metabox_id}() {
     global \$post;
     \$nonce = wp_create_nonce( plugin_basename(__FILE__) );
-    \$meta = get_post_meta(\$post->ID, {$metabox_id}, true);
+    \$meta = get_post_meta(\$post->ID, '{$metabox_id}', true);
     echo '<input type=\"hidden\" name=\"meta_noncename\" value=\"'.\$nonce.'\" />';
     echo '<input type=\"text\" name=\"{$metabox_id}\" value=\"'.\$meta.'\" />';
    
@@ -203,7 +206,7 @@ function %s($post_id, $post) {
 
 EOD;
     foreach ($metaboxes as $metabox_id => $metabox_title) {
-        $add_metabox_to_array = "\t\$%s['{$metabox_id}'] = \$_POST['{$metabox_id}'];\n";
+        $add_metabox_to_array = "\tif(!empty(\$_POST['{$metabox_id}'])) \$%s['{$metabox_id}'] = \$_POST['{$metabox_id}'];\n";
         $add_metabox_to_array = sprintf($add_metabox_to_array, prepend("meta"));        
         $dak_write_save_metaboxes_method .= $add_metabox_to_array;
     }
