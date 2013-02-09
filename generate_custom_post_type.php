@@ -31,7 +31,8 @@ $metaboxes = array(
     	"is_accepted" => "is_accepted",
     	"is_public" => "is_visible",
     	"custom_location" => "customLocation",
-        "common_location" => "commonLocation",
+        "common_location_id" => "commonLocation_id",
+        "common_location_name" => "commonLocation_name",
     	"location_id" => "location_id",
     	"arranger_id" => "arranger_id",
         "arranger_name" => "arranger_name",
@@ -147,6 +148,7 @@ fwrite($fh, $add_action_method);
 $dak_add_metaboxes_method = <<<'EOD'
 /* Adds a box to the main column on the Post and Page edit screens */
 function %s() { 
+    global $post_type_namespace;
 EOD;
 
 
